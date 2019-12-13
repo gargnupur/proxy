@@ -135,10 +135,6 @@ Network::FilterStatus MetadataExchangeFilter::onData(Buffer::Instance& data,
 }
 
 Network::FilterStatus MetadataExchangeFilter::onNewConnection() {
-  return Network::FilterStatus::Continue;
-}
-
-Network::FilterStatus MetadataExchangeFilter::onWrite(Buffer::Instance&, bool) {
   switch (conn_state_) {
     case Invalid:
     case Done:
@@ -168,7 +164,10 @@ Network::FilterStatus MetadataExchangeFilter::onWrite(Buffer::Instance&, bool) {
       // These are to be handled in Reading Pipeline.
       return Network::FilterStatus::Continue;
   }
+  return Network::FilterStatus::Continue;
+}
 
+Network::FilterStatus MetadataExchangeFilter::onWrite(Buffer::Instance&, bool) {
   return Network::FilterStatus::Continue;
 }
 
