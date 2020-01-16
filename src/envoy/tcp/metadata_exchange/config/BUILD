@@ -15,6 +15,8 @@
 ################################################################################
 #
 
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
 proto_library(
     name = "metadata_exchange_proto",
     srcs = ["metadata_exchange.proto"],
@@ -24,4 +26,12 @@ cc_proto_library(
     name = "metadata_exchange_cc_proto",
     visibility = ["//visibility:public"],
     deps = ["metadata_exchange_proto"],
+)
+
+go_proto_library(
+    name = "metadata_exchange_go_proto",
+    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
+    visibility = ["//visibility:public"],
+    proto = "metadata_exchange_proto",
+    importpath = "github.com/istio.io/proxy/src/envoy/tcp/metadata_exchange/config",
 )

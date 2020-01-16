@@ -20,7 +20,7 @@ package envoy.tcp.metadataexchange.config;
 option java_outer_classname = "MetadataExchangeProto";
 option java_multiple_files = true;
 option java_package = "io.envoyproxy.envoy.tcp.metadataexchange.config";
-option go_package = "MetadataExchange";
+option go_package = "github.com/istio.io/proxy/src/envoy/tcp/metadata_exchange/config";
 
 // [#protodoc-title: MetadataExchange protocol match and data transfer]
 // MetadataExchange protocol match and data transfer

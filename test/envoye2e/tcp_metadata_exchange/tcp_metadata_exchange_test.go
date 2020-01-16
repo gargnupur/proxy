@@ -246,6 +246,7 @@ func TestTCPMetadataExchange(t *testing.T) {
 	s.SetClientNodeMetadata(clientNodeMetadata)
 	s.SetServerNodeMetadata(serverNodeMetadata)
 	s.SetExtraConfig(statsConfig)
+	s.SetCopyYamlFiles(true)
 	s.ClientEnvoyTemplate = env.GetTCPClientEnvoyConfTmp()
 	s.ServerEnvoyTemplate = env.GetTCPServerEnvoyConfTmp()
 	if err := s.SetUpClientServerEnvoy(); err != nil {
