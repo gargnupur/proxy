@@ -76,10 +76,12 @@ MetadataExchangeConfig::MetadataExchangeConfig(
 
 Network::FilterStatus MetadataExchangeFilter::onData(Buffer::Instance& data,
                                                      bool) {
+      ENVOY_LOG(trace,"Reached here onData {} {}", data.toString(), config_->filter_direction_);
   switch (conn_state_) {
     case Invalid:
       FALLTHRU;
     case Done:
+      ENVOY_LOG(trace, "Reached here continuiing. {}", config_->filter_direction_);
       // No work needed if connection state is Done or Invalid.
       return Network::FilterStatus::Continue;
     case ConnProtocolNotRead: {
@@ -94,16 +96,8 @@ Network::FilterStatus MetadataExchangeFilter::onData(Buffer::Instance& data,
         config_->stats().alpn_protocol_not_found_.inc();
         return Network::FilterStatus::Continue;
       }
-      conn_state_ = WriteMetadata;
+      conn_state_ = ReadingInitialHeader;
       config_->stats().alpn_protocol_found_.inc();
-      FALLTHRU;
-    }
-    case WriteMetadata: {
-      // TODO(gargnupur): Try to move this just after alpn protocol is
-      // determined and first onData is called in Downstream filter.
-      // If downstream filter, write metadata.
-      // Otherwise, go ahead and try to read initial header and proxy data.
-      writeNodeMetadata();
       FALLTHRU;
     }
     case ReadingInitialHeader:
@@ -126,9 +120,24 @@ Network::FilterStatus MetadataExchangeFilter::onData(Buffer::Instance& data,
       if (conn_state_ == Invalid) {
         return Network::FilterStatus::Continue;
       }
+      ENVOY_LOG(trace,"Reached here onData ReadingProxyHeader{} {}", data.toString(), config_->filter_direction_);
+      FALLTHRU;
+    }
+    case WriteMetadata: {
+      // TODO(gargnupur): Try to move this just after alpn protocol is
+      // determined and first onData is called in Downstream filter.
+      // If downstream filter, write metadata.
+      // Otherwise, go ahead and try to read initial header and proxy data.
+      ENVOY_LOG(trace, "Reached here write metadata. {}", config_->filter_direction_);
+      if(config_->filter_direction_ == FilterDirection::Downstream){
+        conn_state_ = WriteMetadata; 
+        ENVOY_LOG(trace, "Reached here write metadata. {}", config_->filter_direction_);
+        writeNodeMetadata();
+      }
       FALLTHRU;
     }
     default:
+      ENVOY_LOG(trace,"Reached here onData done {}", config_->filter_direction_);
       conn_state_ = Done;
       return Network::FilterStatus::Continue;
   }
@@ -141,6 +150,7 @@ Network::FilterStatus MetadataExchangeFilter::onNewConnection() {
 }
 
 Network::FilterStatus MetadataExchangeFilter::onWrite(Buffer::Instance&, bool) {
+  ENVOY_LOG(trace,"Reached here onWrite {}", config_->filter_direction_);
   switch (conn_state_) {
     case Invalid:
     case Done:
@@ -162,9 +172,13 @@ Network::FilterStatus MetadataExchangeFilter::onWrite(Buffer::Instance&, bool) {
       FALLTHRU;
     }
     case WriteMetadata: {
+      ENVOY_LOG(trace,"Reached here onWrite {}", config_->filter_direction_);
       // TODO(gargnupur): Try to move this just after alpn protocol is
       // determined and first onWrite is called in Upstream filter.
-      writeNodeMetadata();
+      if(config_->filter_direction_ != FilterDirection::Downstream){
+        writeNodeMetadata();
+        conn_state_ = ReadingInitialHeader;
+      }
       FALLTHRU;
     }
     case ReadingInitialHeader:
@@ -203,8 +217,6 @@ void MetadataExchangeFilter::writeNodeMetadata() {
     write_callbacks_->injectWriteDataToFilterChain(*buf, false);
     config_->stats().metadata_added_.inc();
   }
-
-  conn_state_ = ReadingInitialHeader;
 }
 
 void MetadataExchangeFilter::tryReadInitialProxyHeader(Buffer::Instance& data) {

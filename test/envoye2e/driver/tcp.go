@@ -117,13 +117,13 @@ func (t *TCPConnection) Run(p *Params) error {
 	}
 	defer conn.Close()
 	// send to socket
-	fmt.Fprintf(conn, "world"+"\n")
+	fmt.Fprintf(conn, "worlddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"+"\n")
 	// listen for reply
 	message, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
 		return fmt.Errorf("failed to read bytes from conn %v", err)
 	}
-	wantMessage := "hello world\n"
+	wantMessage := "hello worlddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\n"
 	if message != wantMessage {
 		return fmt.Errorf("received bytes got %v want %v", message, wantMessage)
 	}
