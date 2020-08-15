@@ -318,6 +318,7 @@ void StackdriverRootContext::onTick() {
   }
 
   if (enableServerAccessLog()) {
+    LOG_DEBUG("Reached  here exportLogEntry");
     logger_->exportLogEntry(/* is_on_done= */ false);
   }
 }
@@ -328,8 +329,10 @@ bool StackdriverRootContext::onDone() {
   // called, but onConfigure is not triggered. onConfigure is only triggered in
   // thread local VM, which makes it possible that logger_ is empty ptr even
   // when logging is enabled.
+  LOG_DEBUG("Reached  here onDone");
   if (logger_ && enableServerAccessLog() &&
       logger_->exportLogEntry(/* is_on_done= */ true)) {
+    LOG_DEBUG("Reached  here exportLogEntry");
     done = false;
   }
   // TODO: add on done for edge.
@@ -345,6 +348,7 @@ bool StackdriverRootContext::onDone() {
 }
 
 void StackdriverRootContext::record() {
+  LOG_DEBUG(absl::StrCat("Reached here Record. outbound: ", isOutbound()));
   const bool outbound = isOutbound();
   const auto& metadata_key =
       outbound ? kUpstreamMetadataKey : kDownstreamMetadataKey;
@@ -365,6 +369,8 @@ void StackdriverRootContext::record() {
       outbound, local_node, peer_node, request_info,
       !config_.disable_http_size_metrics());
   if (enableServerAccessLog() && shouldLogThisRequest(request_info)) {
+    LOG_DEBUG(absl::StrCat(
+              "Reached here log", request_info.response_code));
     ::Wasm::Common::populateExtendedHTTPRequestInfo(&request_info);
     logger_->addLogEntry(request_info, peer_node);
   }
@@ -526,7 +532,9 @@ StackdriverRootContext* StackdriverContext::getRootContext() {
 }
 
 void StackdriverContext::onLog() {
+  LOG_DEBUG(absl::StrCat("Reached here. outbound: ", getRootContext()->isOutbound()," id: ", context_id_));
   if (!is_initialized_) {
+    LOG_DEBUG(absl::StrCat("Reached here. outbound: ", getRootContext()->isOutbound()," id: ", context_id_));
     return;
   }
   if (is_tcp_) {
@@ -537,6 +545,7 @@ void StackdriverContext::onLog() {
     getRootContext()->deleteFromTCPRequestQueue(context_id_);
     return;
   }
+  LOG_DEBUG(absl::StrCat("Reached here. outbound: ", getRootContext()->isOutbound()," id: ", context_id_));
   // Record telemetry based on request info.
   getRootContext()->record();
 }

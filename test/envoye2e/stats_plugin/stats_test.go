@@ -161,7 +161,7 @@ func TestStatsPayload(t *testing.T) {
 				}, envoye2e.ProxyE2ETests)
 				params.Vars["ClientMetadata"] = params.LoadTestData("testdata/client_node_metadata.json.tmpl")
 				params.Vars["ServerMetadata"] = params.LoadTestData("testdata/server_node_metadata.json.tmpl")
-				params.Vars["ServerHTTPFilters"] = params.LoadTestData("testdata/filters/stats_inbound.yaml.tmpl")
+				params.Vars["ServerHTTPFilters"] = params.LoadTestData("testdata/filters/rbac.yaml.tmpl") + params.LoadTestData("testdata/filters/stats_inbound.yaml.tmpl")
 				params.Vars["ClientHTTPFilters"] = params.LoadTestData("testdata/filters/stats_outbound.yaml.tmpl")
 				if err := (&driver.Scenario{
 					[]driver.Step{

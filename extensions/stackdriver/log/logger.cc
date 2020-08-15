@@ -140,6 +140,7 @@ void Logger::addTcpLogEntry(const ::Wasm::Common::RequestInfo& request_info,
 
 void Logger::addLogEntry(const ::Wasm::Common::RequestInfo& request_info,
                          const ::Wasm::Common::FlatNode& peer_node_info) {
+  printf("Reacehed here addLogEntry");
   // create a new log entry
   auto* log_entries = log_entries_request_->mutable_entries();
   auto* new_entry = log_entries->Add();
@@ -222,11 +223,13 @@ void Logger::fillAndFlushLogEntry(
 }
 
 bool Logger::flush() {
+  printf("Reached here flush");
   if (size_ == 0) {
     // This flush is triggered by timer and does not have any log entries.
     return false;
   }
 
+  printf("Reached here flush actual");
   // Reconstruct a new WriteLogRequest.
   std::unique_ptr<google::logging::v2::WriteLogEntriesRequest> cur =
       std::make_unique<google::logging::v2::WriteLogEntriesRequest>();
@@ -248,6 +251,7 @@ bool Logger::exportLogEntry(bool is_on_done) {
     // No log entry needs to export.
     return false;
   }
+  printf("Reached here exportLogEntry");
   exporter_->exportLogs(request_queue_, is_on_done);
   request_queue_.clear();
   return true;

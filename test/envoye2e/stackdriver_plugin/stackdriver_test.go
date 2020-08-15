@@ -41,7 +41,7 @@ func TestStackdriverPayload(t *testing.T) {
 	params.Vars["STSPort"] = strconv.Itoa(int(stsPort))
 	params.Vars["ClientMetadata"] = params.LoadTestData("testdata/client_node_metadata.json.tmpl")
 	params.Vars["ServerMetadata"] = params.LoadTestData("testdata/server_node_metadata.json.tmpl")
-	params.Vars["ServerHTTPFilters"] = params.LoadTestData("testdata/filters/stackdriver_inbound.yaml.tmpl")
+	params.Vars["ServerHTTPFilters"] = params.LoadTestData("testdata/filters/rbac.yaml.tmpl") + params.LoadTestData("testdata/filters/stackdriver_inbound.yaml.tmpl")
 	params.Vars["ClientHTTPFilters"] = params.LoadTestData("testdata/filters/stackdriver_outbound.yaml.tmpl")
 
 	sd := &Stackdriver{Port: sdPort}
@@ -55,128 +55,18 @@ func TestStackdriverPayload(t *testing.T) {
 			&driver.Update{Node: "server", Version: "0", Listeners: []string{driver.LoadTestData("testdata/listener/server.yaml.tmpl")}},
 			&driver.Envoy{Bootstrap: params.LoadTestData("testdata/bootstrap/server.yaml.tmpl")},
 			&driver.Envoy{Bootstrap: params.LoadTestData("testdata/bootstrap/client.yaml.tmpl")},
-			&driver.Sleep{1 * time.Second},
-			&driver.Repeat{N: 10, Step: driver.Get(params.Ports.ClientPort, "hello, world!")},
-			sd.Check(params,
-				[]string{"testdata/stackdriver/client_request_count.yaml.tmpl", "testdata/stackdriver/server_request_count.yaml.tmpl"},
-				[]SDLogEntry{
-					{
-						LogBaseFile:   "testdata/stackdriver/server_access_log.yaml.tmpl",
-						LogEntryFile:  []string{"testdata/stackdriver/server_access_log_entry.yaml.tmpl"},
-						LogEntryCount: 10,
-					},
-				},
-				[]string{"testdata/stackdriver/traffic_assertion.yaml.tmpl"}, true,
-			),
-			&driver.Stats{params.Ports.ServerAdmin, map[string]driver.StatMatcher{
-				"envoy_type_logging_success_true_export_call": &driver.ExactStat{"testdata/metric/stackdriver_callout_metric.yaml.tmpl"},
-			}},
-		},
-	}).Run(params); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestStackdriverPayloadGateway(t *testing.T) {
-	t.Parallel()
-	params := driver.NewTestParams(t, map[string]string{
-		"RequestPath":            "echo",
-		"SDLogStatusCode":        "200",
-		"EnableMetadataExchange": "true",
-		"StackdriverRootCAFile":  driver.TestPath("testdata/certs/stackdriver.pem"),
-		"StackdriverTokenFile":   driver.TestPath("testdata/certs/access-token"),
-		"StatsConfig":            driver.LoadTestData("testdata/bootstrap/stats.yaml.tmpl"),
-	}, envoye2e.ProxyE2ETests)
-	sdPort := params.Ports.Max + 1
-	stsPort := params.Ports.Max + 2
-	params.Vars["SDPort"] = strconv.Itoa(int(sdPort))
-	params.Vars["STSPort"] = strconv.Itoa(int(stsPort))
-	params.Vars["ServerMetadata"] = params.LoadTestData("testdata/server_node_metadata.json.tmpl")
-	params.Vars["ServerHTTPFilters"] = params.LoadTestData("testdata/filters/stackdriver_inbound.yaml.tmpl")
-	params.Vars["ClientHTTPFilters"] = params.LoadTestData("testdata/filters/stackdriver_outbound.yaml.tmpl")
-
-	sd := &Stackdriver{Port: sdPort}
-
-	if err := (&driver.Scenario{
-		[]driver.Step{
-			&driver.XDS{},
-			sd,
-			&SecureTokenService{Port: stsPort},
-			&driver.Update{Node: "server", Version: "0",
-				Clusters: []string{driver.LoadTestData("testdata/cluster/server.yaml.tmpl")},
-				Listeners: []string{
-					driver.LoadTestData("testdata/listener/client.yaml.tmpl"),
-					driver.LoadTestData("testdata/listener/server.yaml.tmpl"),
-				}},
-			&driver.Envoy{Bootstrap: params.LoadTestData("testdata/bootstrap/server.yaml.tmpl")},
 			&driver.Sleep{1 * time.Second},
 			&driver.Repeat{N: 1, Step: driver.Get(params.Ports.ClientPort, "hello, world!")},
 			sd.Check(params,
-				nil,
-				[]SDLogEntry{
-					{
-						LogBaseFile:   "testdata/stackdriver/gateway_access_log.yaml.tmpl",
-						LogEntryFile:  []string{"testdata/stackdriver/gateway_access_log_entry.yaml.tmpl"},
-						LogEntryCount: 1,
-					},
-				},
-				nil, true,
-			),
-			&driver.Stats{params.Ports.ServerAdmin, map[string]driver.StatMatcher{
-				"envoy_type_logging_success_true_export_call": &driver.ExactStat{"testdata/metric/stackdriver_callout_metric.yaml.tmpl"},
-			}},
-		},
-	}).Run(params); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestStackdriverPayloadWithTLS(t *testing.T) {
-	t.Parallel()
-	params := driver.NewTestParams(t, map[string]string{
-		"ServiceAuthenticationPolicy": "MUTUAL_TLS",
-		"SDLogStatusCode":             "200",
-		"EnableMetadataExchange":      "true",
-		"SourcePrincipal":             "spiffe://cluster.local/ns/default/sa/client",
-		"DestinationPrincipal":        "spiffe://cluster.local/ns/default/sa/server",
-		"StackdriverRootCAFile":       driver.TestPath("testdata/certs/stackdriver.pem"),
-		"StackdriverTokenFile":        driver.TestPath("testdata/certs/access-token"),
-		"StatsConfig":                 driver.LoadTestData("testdata/bootstrap/stats.yaml.tmpl"),
-	}, envoye2e.ProxyE2ETests)
-	sdPort := params.Ports.Max + 1
-	stsPort := params.Ports.Max + 2
-	params.Vars["SDPort"] = strconv.Itoa(int(sdPort))
-	params.Vars["STSPort"] = strconv.Itoa(int(stsPort))
-	params.Vars["ClientMetadata"] = params.LoadTestData("testdata/client_node_metadata.json.tmpl")
-	params.Vars["ServerMetadata"] = params.LoadTestData("testdata/server_node_metadata.json.tmpl")
-	params.Vars["ClientTLSContext"] = params.LoadTestData("testdata/transport_socket/client.yaml.tmpl")
-	params.Vars["ServerTLSContext"] = params.LoadTestData("testdata/transport_socket/server.yaml.tmpl")
-	params.Vars["ServerHTTPFilters"] = params.LoadTestData("testdata/filters/stackdriver_inbound.yaml.tmpl")
-	params.Vars["ClientHTTPFilters"] = params.LoadTestData("testdata/filters/stackdriver_outbound.yaml.tmpl")
-
-	sd := &Stackdriver{Port: sdPort}
-
-	if err := (&driver.Scenario{
-		[]driver.Step{
-			&driver.XDS{},
-			sd,
-			&SecureTokenService{Port: stsPort},
-			&driver.Update{Node: "client", Version: "0", Listeners: []string{driver.LoadTestData("testdata/listener/client.yaml.tmpl")}},
-			&driver.Update{Node: "server", Version: "0", Listeners: []string{driver.LoadTestData("testdata/listener/server.yaml.tmpl")}},
-			&driver.Envoy{Bootstrap: params.LoadTestData("testdata/bootstrap/server.yaml.tmpl")},
-			&driver.Envoy{Bootstrap: params.LoadTestData("testdata/bootstrap/client.yaml.tmpl")},
-			&driver.Sleep{1 * time.Second},
-			&driver.Repeat{N: 10, Step: driver.Get(params.Ports.ClientPort, "hello, world!")},
-			sd.Check(params,
 				[]string{"testdata/stackdriver/client_request_count.yaml.tmpl", "testdata/stackdriver/server_request_count.yaml.tmpl"},
 				[]SDLogEntry{
 					{
 						LogBaseFile:   "testdata/stackdriver/server_access_log.yaml.tmpl",
 						LogEntryFile:  []string{"testdata/stackdriver/server_access_log_entry.yaml.tmpl"},
-						LogEntryCount: 10,
+						LogEntryCount: 1,
 					},
 				},
-				nil, true,
+				[]string{"testdata/stackdriver/traffic_assertion.yaml.tmpl"}, true,
 			),
 			&driver.Stats{params.Ports.ServerAdmin, map[string]driver.StatMatcher{
 				"envoy_type_logging_success_true_export_call": &driver.ExactStat{"testdata/metric/stackdriver_callout_metric.yaml.tmpl"},
